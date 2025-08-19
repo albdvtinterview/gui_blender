@@ -2,7 +2,7 @@ import bpy
 import json
 
 names = [c.name for c in bpy.data.collections]
-names.insert(0, "All")
+names.insert(0, "Scene Collection")
 
 print("===BEGIN_JSON===")
 print(json.dumps(names, indent=4))
