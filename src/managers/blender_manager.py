@@ -13,16 +13,15 @@ BLENDER_PATH = "/Applications/Blender.app/Contents/MacOS/Blender"  # path to ble
 BLENDER_GET_COLLECTIONS_SCRIPT_PATH = "src/scripts/blender/get_collection_names.py"
 BLENDER_EXPORT_SCRIPT_PATH = "src/scripts/blender/export_collection_objects.py"
 BLENDER_IMPORT_SCRIPT_PATH = "src/scripts/blender/import_fbx.py"
-DEFAULT_DIRECTORY = os.path.expanduser("~/Desktop/modeling/test_task")
+DEFAULT_DIRECTORY = os.path.expanduser("~/PycharmProjects/gui_blender/assets")
 SCRIPT_TYPES = ["Import to Blender", "Export from Blender"]  # 0 1
 
 # TODO: Плохая зависимость к пути проекта и его названия!
 fbx_file_name = "test"
-FBX_EXPORT_PATH = os.path.expanduser("~/PycharmProjects/gui_blender/assets/output/" + fbx_file_name + ".fbx")
+FBX_EXPORT_PATH = os.path.expanduser("~/PycharmProjects/gui_blender/assets/" + fbx_file_name + ".fbx")
 
 
 class MainWindow(QWidget):
-
     def __init__(self):
         super().__init__()
         # head widgets
@@ -33,11 +32,11 @@ class MainWindow(QWidget):
 
         # widgets
         self.line_edit = QLineEdit()
-        self.line_edit.setPlaceholderText("Path to .output file")
+        self.line_edit.setPlaceholderText("Path to .fbx file")
         self.add_path_button = QPushButton("Open")
         self.add_path_button.clicked.connect(self.on_file_dialog_open)
         self.run_script_button = QPushButton("Run script")
-        self.run_script_button.clicked.connect(self.on_run_script_clicked)
+        self.run_script_button.clicked.connect(self.on_run_script)
 
         # ComboBox: Export / Import
         self.mode_combo = QComboBox()
@@ -45,23 +44,22 @@ class MainWindow(QWidget):
         self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
 
         # ComboBox: Collections (blocked by default)
+        self.label_for_collection = QLabel("Collection:")
         self.collections_combo = QComboBox()
+        self.collections_combo.setPlaceholderText("Scene Collection")
         self.collections_combo.setEnabled(False)
-        self.collections_combo.setPlaceholderText("All")
 
         # layouts
-        # first path layout
         self.select_folder_layout = QHBoxLayout()
         self.select_folder_layout.addWidget(self.line_edit)
         self.select_folder_layout.addWidget(self.add_path_button)
 
         self.run_script_layout = QVBoxLayout()
-        self.run_script_layout.setContentsMargins(10, 20, 10, 20)
         self.run_script_layout.addWidget(QLabel("Mode:"))
         self.run_script_layout.addWidget(self.mode_combo)
         self.run_script_layout.addWidget(QLabel("Path:"))
         self.run_script_layout.addLayout(self.select_folder_layout)
-        self.run_script_layout.addWidget(QLabel("Collections:"))
+        self.run_script_layout.addWidget(self.label_for_collection)
         self.run_script_layout.addWidget(self.collections_combo)
         self.run_script_layout.addWidget(self.run_script_button)
 
@@ -70,14 +68,13 @@ class MainWindow(QWidget):
     @Slot()
     def on_file_dialog_open(self):
         """Открытие диалога для выбора файла или папки"""
-
         # Определяем фильтр в зависимости от режима
         if self.mode_combo.currentText() == SCRIPT_TYPES[0]:  # Import
             self.file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Select FBX file",
                 DEFAULT_DIRECTORY,
-                "FBX Files (*.output)"
+                "FBX Files (*.fbx)"
             )
         else:  # Export
             self.file_path, _ = QFileDialog.getOpenFileName(
@@ -102,7 +99,6 @@ class MainWindow(QWidget):
 
     def get_collections_in_blender_file(self) -> list[str]:
         """Текст"""
-
         try:
             command = [
                 BLENDER_PATH,
@@ -133,16 +129,20 @@ class MainWindow(QWidget):
     @Slot()
     def on_mode_changed(self, text):
         """Срабатывает при смене режима Export/Import"""
-
-        if text == SCRIPT_TYPES[1] and self.line_edit.text().endswith(".blend"):  # if you selected export file
-            self.collections_combo.setEnabled(True)
         if text == SCRIPT_TYPES[1]:  # Export from Blender
             self.line_edit.setPlaceholderText("Path to .blend file")
+            self.line_edit.clear()
+            if self.line_edit.text().endswith(".blend"):
+                self.collections_combo.setEnabled(True)
+            else:
+                self.collections_combo.setEnabled(False)
         if text == SCRIPT_TYPES[0]:  # Import to Blender
-            self.line_edit.setPlaceholderText("Path to .output file")
+            self.line_edit.setPlaceholderText("Path to .fbx file")
+            self.line_edit.clear()
+            self.collections_combo.setEnabled(False)
 
     @Slot()
-    def on_run_script_clicked(self):
+    def on_run_script(self):
         if self.mode_combo.currentText() == SCRIPT_TYPES[1]:  # Export from Blender
             print("Started exporting...")
             self.on_fxb_export_from_blender()
@@ -154,7 +154,7 @@ class MainWindow(QWidget):
         # TODO: # тестовый .blend file path нужно убрать и сделать выбор через gui
         command = [
             BLENDER_PATH,
-            "-b", f"{os.path.expanduser("~/PycharmProjects/gui_blender/assets/test/test.blend")}",
+            "-b", f"{os.path.expanduser("~/PycharmProjects/gui_blender/assets/test.blend")}",
             "-P", BLENDER_IMPORT_SCRIPT_PATH,
             "--",
             self.file_path
@@ -178,7 +178,6 @@ class MainWindow(QWidget):
                 data = {"error": f"Failed to decode JSON: {e}"}
         else:
             data = {"error": "JSON not found in Blender output"}
-
         print(data)
 
     def on_fxb_export_from_blender(self):
@@ -211,3 +210,4 @@ class MainWindow(QWidget):
         else:
             data = {"error": "JSON not found in Blender output"}
         print(data)
+
